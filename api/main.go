@@ -1,10 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"encoding/json"
 	"strings"
 	"strconv"
 
@@ -44,7 +44,6 @@ func registerEndpoint(response http.ResponseWriter, request *http.Request) {
 		}
 		http.HandleFunc(endpoint.Origin, redirectHandler(endpoint.Target))
 		response.WriteHeader(http.StatusCreated)
-
 	}
 }
 
@@ -55,8 +54,9 @@ func helloUser(c cluster.Cluster) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		bodies := []string{}
 		for _, path := range c.GetSlices() {
-			resp, err := http.Get(path)
+			resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:8080%s", path))
 			if err != nil {
+				panic(err)
 				w.WriteHeader(http.StatusBadRequest)
 				return
 			}
@@ -64,6 +64,7 @@ func helloUser(c cluster.Cluster) func(w http.ResponseWriter, r *http.Request) {
 			body, err := ioutil.ReadAll(resp.Body)
 			bodies = append(bodies, string(body))
 		}
+		w.Header().Set("Content-Type", "text/html")
 		fmt.Fprintf(w, strings.Join(bodies, ""))
 	}
 }

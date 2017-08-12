@@ -44,7 +44,7 @@ func TestGetSlices(t *testing.T) {
 	if len(slices) != 10 {
 		t.Error("should return 10 items")
 	}
-	if slices[5] != fmt.Sprintf("/slices/5") {
+	if slices[5] != fmt.Sprintf("/slices/5.part") {
 		t.Error("returned incorrect path")
 	}
 }

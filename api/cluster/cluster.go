@@ -14,26 +14,36 @@ type (
 	}
 
 	cluster struct {
-		locker       *mutexLocker
-		numInstances int
-		numSlices    int
-		slicer       func(int) interface{}
-		randomize    func([]string) []string
+		locker         *mutexLocker
+		numInstances   int
+		currInstanceId int
+		numSlices      int
+		slicer         func(int) interface{}
+		randomize      func([]string) []string
 	}
 )
 
+//todo: make configurable
 const NUM_PARTS = 136
+const NUM_INSTANCES = 1
 
 func NewCluster() *cluster {
 	rand.Seed(time.Now().UnixNano())
-	return &cluster{locker: newLocker(), numInstances: -1, numSlices: NUM_PARTS, slicer: getSlice, randomize: randomize}
+	return &cluster{
+		locker:         newLocker(),
+		currInstanceId: -1,
+		numInstances:   NUM_INSTANCES,
+		numSlices:      NUM_PARTS,
+		slicer:         getSlice,
+		randomize:      randomize,
+	}
 }
 
 func (c *cluster) IncrClusterId() int {
 	var res int;
 	c.locker.run(func() {
-		c.numInstances++
-		res = c.numInstances
+		c.currInstanceId++
+		res = c.currInstanceId
 	})
 	return res
 }
@@ -57,7 +67,6 @@ func (c *cluster) GetInstanceSlices(instanceId int) []string {
 		return slices[lhs: ]
 	}
 	return slices[lhs: rhs]
-
 }
 
 func randomize(slice []string) []string {
@@ -72,5 +81,5 @@ func randomize(slice []string) []string {
 }
 
 func getSlice(pos int) interface{} {
-	return fmt.Sprintf("/slices/%d", pos)
+	return fmt.Sprintf("/slices/%d.part", pos)
 }
