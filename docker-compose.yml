@@ -1,4 +1,4 @@
-version: '2'
+version: '3'
 services:
 
   dns:
@@ -19,20 +19,44 @@ services:
     networks:
       - network
 
-  baby_janus:
-    image: baby_janus
+  baby_janus_api:
+    image: baby_janus_api
+    ports:
+      - "8080:8080"
     build:
-      context: ./main
-    command: go run /go/src/github.com/wwgberlin/baby_janus/main.go
+      context: ./api
     volumes:
-      - ./main:/go/src/github.com/wwgberlin/baby_janus
+      - .:/go/src/github.com/wwgberlin/baby_janus/
     networks:
       - network
     depends_on:
       - dns
       - proxy
+    links:
+      - dns
+      - proxy
     environment:
       - VIRTUAL_HOST=main.wwgberlin
+
+  baby_janus_server:
+    image: baby_janus_server
+    build:
+      context: ./server
+    command: go run /go/src/github.com/wwgberlin/baby_janus/server/main.go
+    volumes:
+      - ./server:/go/src/github.com/wwgberlin/baby_janus/server
+    networks:
+      - network
+    depends_on:
+      - dns
+      - proxy
+      - baby_janus_api
+    links:
+      - dns
+      - proxy
+      - baby_janus_api
+    environment:
+      - VIRTUAL_HOST=server.wwgberlin
 
 networks:
   network:
