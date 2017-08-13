@@ -5,9 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
-	"strconv"
-
 	"github.com/wwgberlin/baby_janus/api/cluster"
 )
 
@@ -48,28 +45,6 @@ func registerEndpoint(response http.ResponseWriter, request *http.Request) {
 }
 
 /*
-	helloUser fetches the parts from all the APIs registered to the cluster
- */
-func helloUser(c cluster.Cluster) func(w http.ResponseWriter, r *http.Request) {
-	return func(w http.ResponseWriter, r *http.Request) {
-		bodies := []string{}
-		for _, path := range c.GetSlices() {
-			resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:8080%s", path))
-			if err != nil {
-				panic(err)
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
-			bodies = append(bodies, string(body))
-		}
-		w.Header().Set("Content-Type", "text/html")
-		fmt.Fprintf(w, strings.Join(bodies, ""))
-	}
-}
-
-/*
 	incrClusterId - returns handler to increment the cluster servers size
  */
 
@@ -79,21 +54,32 @@ func incrClusterId(c cluster.Cluster) func(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-func getInstanceSlices(c cluster.Cluster) func(http.ResponseWriter, *http.Request) {
+/*
+	helloUser fetches the parts from all the APIs registered to the cluster
+ */
+func helloUser(c cluster.Cluster) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var id int
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
+		bodies := []string{}
+		for _, path := range GetSlices() {
+			resp, err := http.Get(fmt.Sprintf("http://127.0.0.1:8080%s", path))
+			if err != nil {
+				panic(err)
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			defer resp.Body.Close()
+			body, err := ioutil.ReadAll(resp.Body)
+			fmt.Println(body)
+			bodies = append(bodies, string(body))
 		}
-		id, err = strconv.Atoi(string(body));
-		if err != nil {
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		slicesJson, _ := json.Marshal(c.GetInstanceSlices(id))
-		w.Write(slicesJson)
+		w.Header().Set("Content-Type", "text/html")
+		fmt.Fprintf(w, strings.Join(bodies, ""))
+	}
+}
+
+func getSeed(c cluster.Cluster) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, fmt.Sprintf("%v", c.GetSeed()))
 	}
 }
 
@@ -105,9 +91,18 @@ func main() {
 	 */
 	http.HandleFunc("/", helloUser(c))
 	http.HandleFunc("/next_cluster_id", incrClusterId(c))
-	http.HandleFunc("/get_instance_slices", getInstanceSlices(c))
+	http.HandleFunc("/seed", getSeed(c))
 	http.HandleFunc("/register_endpoint", registerEndpoint)
 
 	http.ListenAndServe(":8080", nil)
+
+}
+
+func GetSlices() []string {
+	res := make([]string, c.numSlices)
+	for i := range res {
+		res[i] = fmt.Sprintf("%v", c.slicer(i))
+	}
+	return res
 
 }

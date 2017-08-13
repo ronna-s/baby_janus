@@ -42,7 +42,6 @@ services:
     image: baby_janus_server
     build:
       context: ./server
-    command: go run /go/src/github.com/wwgberlin/baby_janus/server/main.go
     volumes:
       - ./server:/go/src/github.com/wwgberlin/baby_janus/server
     networks:

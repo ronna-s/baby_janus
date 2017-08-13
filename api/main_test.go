@@ -73,21 +73,6 @@ func mustHttpGet(url string) (body []byte) {
 	return body
 }
 
-func TestGetInstanceSlices(t *testing.T) {
-	var slices []string
-	mock := clusterMock{iterator: iterator()}
-	ts := httptest.NewServer(http.HandlerFunc(getInstanceSlices(mock)))
-
-	body := mustHttpPost(ts.URL, "text/plain", []byte("1"))
-	if err := json.Unmarshal(body, &slices); err != nil {
-		t.Fatal(err.Error())
-	}
-	if slices[0] != "2" || slices[1] != "3" {
-		t.Error(fmt.Sprintf("unexpected slices returned from server %v", slices))
-	}
-	defer ts.Close()
-}
-
 func TestIncrClusterId(t *testing.T) {
 	mock := clusterMock{iterator: iterator()}
 	mock.IncrClusterId()
@@ -124,6 +109,11 @@ func iterator() func() int {
 func (c clusterMock) IncrClusterId() int {
 	return c.iterator()
 }
+
 func (c clusterMock) GetInstanceSlices(id int) []string {
 	return c.GetSlices()[id*2:(id+1)*2]
+}
+
+func (c clusterMock) GetSeed() int64 {
+	return 0
 }
